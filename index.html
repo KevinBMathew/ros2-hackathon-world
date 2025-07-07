@@ -3,258 +3,527 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gazebo World File Path Replacer</title>
+    <title>Gazebo SDF URI Path Replacer</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+        * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
         }
-        button {
-            background-color: #007bff;
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
             color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
+            padding: 30px;
+            text-align: center;
         }
-        button:hover {
-            background-color: #0056b3;
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
         }
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
         }
-        .result {
-            margin-top: 20px;
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .input-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .path-input {
+            width: 100%;
             padding: 15px;
-            background-color: #d4edda;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .path-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .file-status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .file-status.loading {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        .file-status.success {
+            background: #d4edda;
             border: 1px solid #c3e6cb;
-            border-radius: 5px;
+            color: #155724;
         }
-        .error {
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
+
+        .file-status.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
         }
-        .loading {
-            background-color: #d1ecf1;
-            border-color: #bee5eb;
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
         }
-        .preview {
-            margin-top: 20px;
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .output-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 30px;
+            border: 2px solid #e9ecef;
+        }
+
+        .output-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .preview-area {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
             max-height: 400px;
             overflow-y: auto;
-            background-color: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            font-family: monospace;
             white-space: pre-wrap;
-            font-size: 12px;
+            word-break: break-all;
         }
-        .file-info {
-            background-color: #e9ecef;
-            padding: 15px;
-            border-radius: 5px;
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
             margin-bottom: 20px;
         }
-        .file-info h3 {
-            margin-top: 0;
-            color: #495057;
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-info {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Gazebo World File Path Replacer</h1>
-        <p>Enter your desired models folder path to replace all file URIs in the pre-loaded world file.</p>
-        
-        <div class="file-info">
-            <h3>📁 Current World File</h3>
-            <p><strong>File:</strong> <code>world_file.world</code></p>
-            <p><strong>Status:</strong> <span id="fileStatus">Loading...</span></p>
-            <p><strong>Current paths:</strong> <code>file:///home/kevin/models/</code></p>
+        <div class="header">
+            <h1>🔧 Gazebo SDF URI Path Replacer</h1>
+            <p>Automatically processes world.sdf and replaces model URIs with your custom path</p>
         </div>
-        
-        <div class="form-group">
-            <label for="newPath">New Models Folder Path:</label>
-            <input type="text" id="newPath" placeholder="e.g., /path/to/your/models" required>
-            <small>Enter the full path to your models folder (e.g., /home/yourusername/models)</small>
+
+        <div class="main-content">
+            <div class="input-section">
+                <div id="fileStatus" class="file-status loading">
+                    📄 Loading world.sdf file...
+                </div>
+
+                <div class="input-group">
+                    <label for="newPath">🗂️ New Models Directory Path</label>
+                    <input 
+                        type="text" 
+                        id="newPath" 
+                        class="path-input" 
+                        placeholder="e.g., /home/myuser/gazebo_models or file:///path/to/models"
+                        value=""
+                    />
+                    <small style="color: #7f8c8d; margin-top: 5px; display: block;">
+                        Enter the new path to your models directory. The tool will replace all instances of "file:///home/kevin/models/" with your path.
+                    </small>
+                </div>
+
+                <div class="button-group">
+                    <button id="processBtn" class="btn btn-primary" disabled>
+                        🔄 Process File
+                    </button>
+                    <button id="downloadBtn" class="btn btn-success" disabled>
+                        💾 Download Modified SDF
+                    </button>
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processing your SDF file...</p>
+            </div>
+
+            <div class="output-section" id="outputSection" style="display: none;">
+                <h3>📊 Processing Results</h3>
+                
+                <div class="stats" id="stats"></div>
+
+                <div class="alert alert-info" id="resultAlert"></div>
+
+                <h3>📄 Modified Content Preview</h3>
+                <div class="preview-area" id="preview"></div>
+            </div>
         </div>
-        
-        <button onclick="processFile()" id="processBtn" disabled>Process File</button>
-        
-        <div id="result"></div>
-        <div id="preview"></div>
     </div>
 
     <script>
-        let worldFileContent = '';
-        const worldFileName = 'world.sdf';
-        
-        // Load the world file when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            loadWorldFile();
-        });
-        
-        async function loadWorldFile() {
-            const statusElement = document.getElementById('fileStatus');
-            const processBtn = document.getElementById('processBtn');
-            
-            try {
-                statusElement.textContent = 'Loading...';
-                statusElement.style.color = '#007bff';
+        class SDFProcessor {
+            constructor() {
+                this.originalContent = '';
+                this.modifiedContent = '';
+                this.replacementCount = 0;
                 
-                // Fetch the world file from the same repository
-                const response = await fetch(worldFileName);
+                this.initializeEventListeners();
+                this.loadWorldFile();
+            }
+
+            initializeEventListeners() {
+                document.getElementById('processBtn').addEventListener('click', this.processFile.bind(this));
+                document.getElementById('downloadBtn').addEventListener('click', this.downloadFile.bind(this));
                 
-                if (!response.ok) {
-                    throw new Error(`Failed to load world file: ${response.status} ${response.statusText}`);
+                // Allow processing when Enter is pressed in the path input
+                document.getElementById('newPath').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.processFile();
+                    }
+                });
+
+                // Update button state when path changes
+                document.getElementById('newPath').addEventListener('input', this.updateProcessButton.bind(this));
+            }
+
+            async loadWorldFile() {
+                const fileStatus = document.getElementById('fileStatus');
+                
+                try {
+                    fileStatus.textContent = '📄 Loading world.sdf file...';
+                    fileStatus.className = 'file-status loading';
+                    
+                    const response = await fetch('./world.sdf');
+                    
+                    if (!response.ok) {
+                        throw new Error(`Failed to load world.sdf: ${response.status} ${response.statusText}`);
+                    }
+                    
+                    this.originalContent = await response.text();
+                    
+                    fileStatus.textContent = '✅ world.sdf loaded successfully!';
+                    fileStatus.className = 'file-status success';
+                    
+                    this.updateProcessButton();
+                    
+                } catch (error) {
+                    console.error('Error loading world.sdf:', error);
+                    fileStatus.textContent = `❌ Error loading world.sdf: ${error.message}`;
+                    fileStatus.className = 'file-status error';
+                }
+            }
+
+            updateProcessButton() {
+                const hasFile = this.originalContent.length > 0;
+                const hasPath = document.getElementById('newPath').value.trim().length > 0;
+                document.getElementById('processBtn').disabled = !(hasFile && hasPath);
+            }
+
+            processFile() {
+                const newPath = document.getElementById('newPath').value.trim();
+                
+                if (!this.originalContent) {
+                    alert('World.sdf file is not loaded yet.');
+                    return;
+                }
+
+                if (!newPath) {
+                    alert('Please enter a new models directory path.');
+                    return;
+                }
+
+                this.showLoading(true);
+
+                // Simulate processing delay for better UX
+                setTimeout(() => {
+                    this.performReplacement(newPath);
+                    this.showLoading(false);
+                    this.displayResults();
+                }, 500);
+            }
+
+            performReplacement(newPath) {
+                // Ensure the new path ends with proper formatting
+                let formattedPath = newPath;
+                
+                // Add file:// prefix if not present
+                if (!formattedPath.startsWith('file://')) {
+                    formattedPath = 'file://' + (formattedPath.startsWith('/') ? '' : '/') + formattedPath;
                 }
                 
-                worldFileContent = await response.text();
+                // Ensure path ends with / for proper concatenation
+                if (!formattedPath.endsWith('/')) {
+                    formattedPath += '/';
+                }
+
+                // Replace all instances of the original path
+                const originalPattern = /file:\/\/\/home\/kevin\/models\//g;
                 
-                // Count existing paths
-                const pathCount = (worldFileContent.match(/file:\/\/\/home\/kevin\/models\//g) || []).length;
+                // Count matches before replacement
+                const matches = this.originalContent.match(originalPattern);
+                this.replacementCount = matches ? matches.length : 0;
                 
-                statusElement.textContent = `✅ Loaded successfully (${pathCount} paths found)`;
-                statusElement.style.color = '#28a745';
-                
-                // Enable the process button
-                processBtn.disabled = false;
-                
-            } catch (error) {
-                console.error('Error loading world file:', error);
-                statusElement.textContent = `❌ Error loading file: ${error.message}`;
-                statusElement.style.color = '#dc3545';
-                
-                showResult('Failed to load world file. Please make sure "world_file.world" exists in the repository.', 'error');
+                // Perform replacement
+                this.modifiedContent = this.originalContent.replace(originalPattern, formattedPath);
             }
-        }
-        
-        function processFile() {
-            const newPath = document.getElementById('newPath').value.trim();
-            const resultDiv = document.getElementById('result');
-            const previewDiv = document.getElementById('preview');
-            
-            // Clear previous results
-            resultDiv.innerHTML = '';
-            previewDiv.innerHTML = '';
-            
-            if (!worldFileContent) {
-                showResult('World file not loaded. Please refresh the page and try again.', 'error');
-                return;
+
+            showLoading(show) {
+                document.getElementById('loading').style.display = show ? 'block' : 'none';
+                document.getElementById('outputSection').style.display = show ? 'none' : 'block';
             }
-            
-            if (!newPath) {
-                showResult('Please enter the new models folder path.', 'error');
-                return;
-            }
-            
-            showResult('Processing file...', 'loading');
-            
-            try {
-                // Replace the path in file URIs
-                // Pattern matches: file:///home/kevin/models/
-                const oldPattern = /file:\/\/\/home\/kevin\/models\//g;
-                const newPathFormatted = newPath.endsWith('/') ? newPath : newPath + '/';
-                const replacement = `file://${newPathFormatted}`;
+
+            displayResults() {
+                // Update stats
+                this.updateStats();
                 
-                const modifiedContent = worldFileContent.replace(oldPattern, replacement);
-                
-                // Count replacements
-                const matches = worldFileContent.match(oldPattern);
-                const replacementCount = matches ? matches.length : 0;
-                
-                if (replacementCount > 0) {
-                    showResult(`✅ Successfully processed! Replaced ${replacementCount} file path(s).`, 'success');
-                    
-                    // Show preview of first few lines
-                    const lines = modifiedContent.split('\n');
-                    const previewLines = lines.slice(0, 50).join('\n');
-                    previewDiv.innerHTML = `<h3>📋 Preview (first 50 lines):</h3>${previewLines}`;
-                    
-                    // Create download link
-                    downloadModifiedFile(modifiedContent, worldFileName);
+                // Update result alert
+                const alertDiv = document.getElementById('resultAlert');
+                if (this.replacementCount > 0) {
+                    alertDiv.innerHTML = `
+                        <strong>✅ Success!</strong> 
+                        Found and replaced ${this.replacementCount} URI path${this.replacementCount !== 1 ? 's' : ''} 
+                        in your SDF file.
+                    `;
+                    alertDiv.className = 'alert alert-info';
                 } else {
-                    showResult('⚠️ No file paths found to replace in the world file.', 'error');
+                    alertDiv.innerHTML = `
+                        <strong>⚠️ No matches found!</strong> 
+                        The file doesn't contain any paths matching "file:///home/kevin/models/".
+                        Please verify this is the correct SDF file.
+                    `;
+                    alertDiv.className = 'alert alert-warning';
                 }
+
+                // Update preview
+                const preview = document.getElementById('preview');
+                const previewContent = this.modifiedContent.substring(0, 2000);
+                preview.textContent = previewContent + (this.modifiedContent.length > 2000 ? '\n\n... (truncated)' : '');
+
+                // Enable download button
+                document.getElementById('downloadBtn').disabled = this.replacementCount === 0;
                 
-            } catch (error) {
-                showResult('❌ Error processing file: ' + error.message, 'error');
+                // Show results section
+                document.getElementById('outputSection').style.display = 'block';
+            }
+
+            updateStats() {
+                const stats = [
+                    { label: 'URIs Replaced', value: this.replacementCount },
+                    { label: 'File Size (KB)', value: Math.round(this.modifiedContent.length / 1024) },
+                    { label: 'Total Lines', value: this.modifiedContent.split('\n').length },
+                    { label: 'Total Models', value: this.countUniqueModels() }
+                ];
+
+                const statsHTML = stats.map(stat => `
+                    <div class="stat-card">
+                        <div class="stat-number">${stat.value}</div>
+                        <div class="stat-label">${stat.label}</div>
+                    </div>
+                `).join('');
+
+                document.getElementById('stats').innerHTML = statsHTML;
+            }
+
+            countUniqueModels() {
+                // Count unique model references
+                const modelMatches = this.modifiedContent.match(/file:\/\/[^"'>]+\/([^\/]+)\/model:/g);
+                if (!modelMatches) return 0;
+                
+                const uniqueModels = new Set();
+                modelMatches.forEach(match => {
+                    const modelName = match.match(/\/([^\/]+)\/model:/)[1];
+                    uniqueModels.add(modelName);
+                });
+                
+                return uniqueModels.size;
+            }
+
+            downloadFile() {
+                if (!this.modifiedContent) {
+                    alert('No modified content to download.');
+                    return;
+                }
+
+                const blob = new Blob([this.modifiedContent], { type: 'application/xml' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'world_modified.sdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                URL.revokeObjectURL(url);
             }
         }
-        
-        function showResult(message, type) {
-            const resultDiv = document.getElementById('result');
-            const className = type === 'error' ? 'error' : (type === 'loading' ? 'loading' : '');
-            resultDiv.innerHTML = `<div class="result ${className}">${message}</div>`;
-        }
-        
-        function downloadModifiedFile(content, originalFilename) {
-            const blob = new Blob([content], { type: 'text/xml' });
-            const url = URL.createObjectURL(blob);
-            
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            const downloadFilename = `modified_${timestamp}_${originalFilename}`;
-            
-            const downloadLink = document.createElement('div');
-            downloadLink.innerHTML = `
-                <br>
-                <a href="${url}" download="${downloadFilename}" 
-                   style="background-color: #28a745; color: white; padding: 10px 20px; 
-                          text-decoration: none; border-radius: 5px; display: inline-block;
-                          margin-right: 10px;">
-                    📥 Download Modified File
-                </a>
-                <button onclick="copyToClipboard('${content.replace(/'/g, "\\'")}'); this.textContent='✅ Copied!'; setTimeout(() => this.textContent='📋 Copy to Clipboard', 2000);" 
-                        style="background-color: #6c757d; color: white; padding: 10px 20px; 
-                               border: none; border-radius: 5px; cursor: pointer;">
-                    📋 Copy to Clipboard
-                </button>
-            `;
-            
-            document.getElementById('result').appendChild(downloadLink);
-        }
-        
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(function() {
-                console.log('Content copied to clipboard');
-            }, function(err) {
-                console.error('Could not copy text: ', err);
-                // Fallback method
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-            });
-        }
+
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new SDFProcessor();
+        });
     </script>
 </body>
 </html>
