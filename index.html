@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gazebo World File Path Replacer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .preview {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gazebo World File Path Replacer</h1>
+        <p>Upload your Gazebo world file and specify the new models folder path to replace all file URIs.</p>
+        
+        <div class="form-group">
+            <label for="worldFile">Select Gazebo World File (.world or .sdf):</label>
+            <input type="file" id="worldFile" accept=".world,.sdf,.xml" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="newPath">New Models Folder Path:</label>
+            <input type="text" id="newPath" placeholder="e.g., /path/to/your/models" required>
+            <small>Enter the full path to your models folder (e.g., /home/yourusername/models)</small>
+        </div>
+        
+        <button onclick="processFile()" id="processBtn">Process File</button>
+        
+        <div id="result"></div>
+        <div id="preview"></div>
+    </div>
+
+    <script>
+        function processFile() {
+            const fileInput = document.getElementById('worldFile');
+            const newPath = document.getElementById('newPath').value.trim();
+            const resultDiv = document.getElementById('result');
+            const previewDiv = document.getElementById('preview');
+            
+            // Clear previous results
+            resultDiv.innerHTML = '';
+            previewDiv.innerHTML = '';
+            
+            if (!fileInput.files[0]) {
+                showResult('Please select a file.', 'error');
+                return;
+            }
+            
+            if (!newPath) {
+                showResult('Please enter the new models folder path.', 'error');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    let content = e.target.result;
+                    
+                    // Replace the path in file URIs
+                    // Pattern matches: file:///home/kevin/models/
+                    const oldPattern = /file:\/\/\/home\/kevin\/models\//g;
+                    const newPathFormatted = newPath.endsWith('/') ? newPath : newPath + '/';
+                    const replacement = `file://${newPathFormatted}`;
+                    
+                    const modifiedContent = content.replace(oldPattern, replacement);
+                    
+                    // Count replacements
+                    const matches = content.match(oldPattern);
+                    const replacementCount = matches ? matches.length : 0;
+                    
+                    if (replacementCount > 0) {
+                        showResult(`Successfully processed! Replaced ${replacementCount} file path(s).`, 'success');
+                        
+                        // Show preview of first few lines
+                        const lines = modifiedContent.split('\n');
+                        const previewLines = lines.slice(0, 50).join('\n');
+                        previewDiv.innerHTML = `<h3>Preview (first 50 lines):</h3>${previewLines}`;
+                        
+                        // Create download link
+                        downloadModifiedFile(modifiedContent, file.name);
+                    } else {
+                        showResult('No file paths found to replace. Make sure this is a valid Gazebo world file.', 'error');
+                    }
+                    
+                } catch (error) {
+                    showResult('Error processing file: ' + error.message, 'error');
+                }
+            };
+            
+            reader.onerror = function() {
+                showResult('Error reading file.', 'error');
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="result ${type === 'error' ? 'error' : ''}">${message}</div>`;
+        }
+        
+        function downloadModifiedFile(content, originalFilename) {
+            const blob = new Blob([content], { type: 'text/xml' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'modified_' + originalFilename;
+            
+            const downloadLink = document.createElement('div');
+            downloadLink.innerHTML = `<br><a href="${url}" download="modified_${originalFilename}" 
+                style="background-color: #28a745; color: white; padding: 10px 20px; 
+                text-decoration: none; border-radius: 5px; display: inline-block;">
+                Download Modified File
+            </a>`;
+            
+            document.getElementById('result').appendChild(downloadLink);
+        }
+        
+        // Allow drag and drop
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('worldFile');
+            const container = document.querySelector('.container');
+            
+            container.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                container.style.backgroundColor = '#e3f2fd';
+            });
+            
+            container.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                container.style.backgroundColor = 'white';
+            });
+            
+            container.addEventListener('drop', function(e) {
+                e.preventDefault();
+                container.style.backgroundColor = 'white';
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
