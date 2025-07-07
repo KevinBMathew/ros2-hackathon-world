@@ -26,7 +26,7 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input[type="text"], input[type="file"] {
+        input[type="text"] {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
@@ -60,6 +60,10 @@
             background-color: #f8d7da;
             border-color: #f5c6cb;
         }
+        .loading {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
         .preview {
             margin-top: 20px;
             max-height: 400px;
@@ -72,16 +76,28 @@
             white-space: pre-wrap;
             font-size: 12px;
         }
+        .file-info {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .file-info h3 {
+            margin-top: 0;
+            color: #495057;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Gazebo World File Path Replacer</h1>
-        <p>Upload your Gazebo world file and specify the new models folder path to replace all file URIs.</p>
+        <p>Enter your desired models folder path to replace all file URIs in the pre-loaded world file.</p>
         
-        <div class="form-group">
-            <label for="worldFile">Select Gazebo World File (.world or .sdf):</label>
-            <input type="file" id="worldFile" accept=".world,.sdf,.xml" required>
+        <div class="file-info">
+            <h3>📁 Current World File</h3>
+            <p><strong>File:</strong> <code>world.sdf</code></p>
+            <p><strong>Status:</strong> <span id="fileStatus">Loading...</span></p>
+            <p><strong>Current paths:</strong> <code>file:///home/kevin/models/</code></p>
         </div>
         
         <div class="form-group">
@@ -90,15 +106,57 @@
             <small>Enter the full path to your models folder (e.g., /home/yourusername/models)</small>
         </div>
         
-        <button onclick="processFile()" id="processBtn">Process File</button>
+        <button onclick="processFile()" id="processBtn" disabled>Process File</button>
         
         <div id="result"></div>
         <div id="preview"></div>
     </div>
 
     <script>
+        let worldFileContent = '';
+        const worldFileName = 'world.sdf';
+        
+        // Load the world file when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadWorldFile();
+        });
+        
+        async function loadWorldFile() {
+            const statusElement = document.getElementById('fileStatus');
+            const processBtn = document.getElementById('processBtn');
+            
+            try {
+                statusElement.textContent = 'Loading...';
+                statusElement.style.color = '#007bff';
+                
+                // Fetch the world file from the same repository
+                const response = await fetch(worldFileName);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load world file: ${response.status} ${response.statusText}`);
+                }
+                
+                worldFileContent = await response.text();
+                
+                // Count existing paths
+                const pathCount = (worldFileContent.match(/file:\/\/\/home\/kevin\/models\//g) || []).length;
+                
+                statusElement.textContent = `✅ Loaded successfully (${pathCount} paths found)`;
+                statusElement.style.color = '#28a745';
+                
+                // Enable the process button
+                processBtn.disabled = false;
+                
+            } catch (error) {
+                console.error('Error loading world file:', error);
+                statusElement.textContent = `❌ Error loading file: ${error.message}`;
+                statusElement.style.color = '#dc3545';
+                
+                showResult('Failed to load world file. Please make sure "world.sdf" exists in the repository.', 'error');
+            }
+        }
+        
         function processFile() {
-            const fileInput = document.getElementById('worldFile');
             const newPath = document.getElementById('newPath').value.trim();
             const resultDiv = document.getElementById('result');
             const previewDiv = document.getElementById('preview');
@@ -107,8 +165,8 @@
             resultDiv.innerHTML = '';
             previewDiv.innerHTML = '';
             
-            if (!fileInput.files[0]) {
-                showResult('Please select a file.', 'error');
+            if (!worldFileContent) {
+                showResult('World file not loaded. Please refresh the page and try again.', 'error');
                 return;
             }
             
@@ -117,99 +175,86 @@
                 return;
             }
             
-            const file = fileInput.files[0];
-            const reader = new FileReader();
+            showResult('Processing file...', 'loading');
             
-            reader.onload = function(e) {
-                try {
-                    let content = e.target.result;
+            try {
+                // Replace the path in file URIs
+                // Pattern matches: file:///home/kevin/models/
+                const oldPattern = /file:\/\/\/home\/kevin\/models\//g;
+                const newPathFormatted = newPath.endsWith('/') ? newPath : newPath + '/';
+                const replacement = `file://${newPathFormatted}`;
+                
+                const modifiedContent = worldFileContent.replace(oldPattern, replacement);
+                
+                // Count replacements
+                const matches = worldFileContent.match(oldPattern);
+                const replacementCount = matches ? matches.length : 0;
+                
+                if (replacementCount > 0) {
+                    showResult(`✅ Successfully processed! Replaced ${replacementCount} file path(s).`, 'success');
                     
-                    // Replace the path in file URIs
-                    // Pattern matches: file:///home/kevin/models/
-                    const oldPattern = /file:\/\/\/home\/kevin\/models\//g;
-                    const newPathFormatted = newPath.endsWith('/') ? newPath : newPath + '/';
-                    const replacement = `file://${newPathFormatted}`;
+                    // Show preview of first few lines
+                    const lines = modifiedContent.split('\n');
+                    const previewLines = lines.slice(0, 50).join('\n');
+                    previewDiv.innerHTML = `<h3>📋 Preview (first 50 lines):</h3>${previewLines}`;
                     
-                    const modifiedContent = content.replace(oldPattern, replacement);
-                    
-                    // Count replacements
-                    const matches = content.match(oldPattern);
-                    const replacementCount = matches ? matches.length : 0;
-                    
-                    if (replacementCount > 0) {
-                        showResult(`Successfully processed! Replaced ${replacementCount} file path(s).`, 'success');
-                        
-                        // Show preview of first few lines
-                        const lines = modifiedContent.split('\n');
-                        const previewLines = lines.slice(0, 50).join('\n');
-                        previewDiv.innerHTML = `<h3>Preview (first 50 lines):</h3>${previewLines}`;
-                        
-                        // Create download link
-                        downloadModifiedFile(modifiedContent, file.name);
-                    } else {
-                        showResult('No file paths found to replace. Make sure this is a valid Gazebo world file.', 'error');
-                    }
-                    
-                } catch (error) {
-                    showResult('Error processing file: ' + error.message, 'error');
+                    // Create download link
+                    downloadModifiedFile(modifiedContent, worldFileName);
+                } else {
+                    showResult('⚠️ No file paths found to replace in the world file.', 'error');
                 }
-            };
-            
-            reader.onerror = function() {
-                showResult('Error reading file.', 'error');
-            };
-            
-            reader.readAsText(file);
+                
+            } catch (error) {
+                showResult('❌ Error processing file: ' + error.message, 'error');
+            }
         }
         
         function showResult(message, type) {
             const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = `<div class="result ${type === 'error' ? 'error' : ''}">${message}</div>`;
+            const className = type === 'error' ? 'error' : (type === 'loading' ? 'loading' : '');
+            resultDiv.innerHTML = `<div class="result ${className}">${message}</div>`;
         }
         
         function downloadModifiedFile(content, originalFilename) {
             const blob = new Blob([content], { type: 'text/xml' });
             const url = URL.createObjectURL(blob);
             
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'modified_' + originalFilename;
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            const downloadFilename = `modified_${timestamp}_${originalFilename}`;
             
             const downloadLink = document.createElement('div');
-            downloadLink.innerHTML = `<br><a href="${url}" download="modified_${originalFilename}" 
-                style="background-color: #28a745; color: white; padding: 10px 20px; 
-                text-decoration: none; border-radius: 5px; display: inline-block;">
-                Download Modified File
-            </a>`;
+            downloadLink.innerHTML = `
+                <br>
+                <a href="${url}" download="${downloadFilename}" 
+                   style="background-color: #28a745; color: white; padding: 10px 20px; 
+                          text-decoration: none; border-radius: 5px; display: inline-block;
+                          margin-right: 10px;">
+                    📥 Download Modified File
+                </a>
+                <button onclick="copyToClipboard('${content.replace(/'/g, "\\'")}'); this.textContent='✅ Copied!'; setTimeout(() => this.textContent='📋 Copy to Clipboard', 2000);" 
+                        style="background-color: #6c757d; color: white; padding: 10px 20px; 
+                               border: none; border-radius: 5px; cursor: pointer;">
+                    📋 Copy to Clipboard
+                </button>
+            `;
             
             document.getElementById('result').appendChild(downloadLink);
         }
         
-        // Allow drag and drop
-        document.addEventListener('DOMContentLoaded', function() {
-            const fileInput = document.getElementById('worldFile');
-            const container = document.querySelector('.container');
-            
-            container.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                container.style.backgroundColor = '#e3f2fd';
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                console.log('Content copied to clipboard');
+            }, function(err) {
+                console.error('Could not copy text: ', err);
+                // Fallback method
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
             });
-            
-            container.addEventListener('dragleave', function(e) {
-                e.preventDefault();
-                container.style.backgroundColor = 'white';
-            });
-            
-            container.addEventListener('drop', function(e) {
-                e.preventDefault();
-                container.style.backgroundColor = 'white';
-                
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    fileInput.files = files;
-                }
-            });
-        });
+        }
     </script>
 </body>
 </html>
