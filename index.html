@@ -95,7 +95,7 @@
         
         <div class="file-info">
             <h3>📁 Current World File</h3>
-            <p><strong>File:</strong> <code>world.sdf</code></p>
+            <p><strong>File:</strong> <code>world_file.world</code></p>
             <p><strong>Status:</strong> <span id="fileStatus">Loading...</span></p>
             <p><strong>Current paths:</strong> <code>file:///home/kevin/models/</code></p>
         </div>
@@ -152,7 +152,7 @@
                 statusElement.textContent = `❌ Error loading file: ${error.message}`;
                 statusElement.style.color = '#dc3545';
                 
-                showResult('Failed to load world file. Please make sure "world.sdf" exists in the repository.', 'error');
+                showResult('Failed to load world file. Please make sure "world_file.world" exists in the repository.', 'error');
             }
         }
         
