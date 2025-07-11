@@ -250,10 +250,33 @@
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 2rem;
+
+                // Add event to update the export command box
+                document.getElementById('newPath').addEventListener('input', this.updateExportCommand.bind(this));
             }
             
             .main-content {
                 padding: 20px;
+            }
+
+            updateExportCommand() {
+                const newPath = document.getElementById('newPath').value.trim();
+                const exportBox = document.getElementById('exportCommandBox');
+                if (!newPath) {
+                    exportBox.style.display = 'none';
+                    return;
+                }
+                let formattedPath = newPath;
+                // Remove file:// prefix if present for the export command
+                if (formattedPath.startsWith('file://')) {
+                    formattedPath = formattedPath.replace(/^file:\/\//, '');
+                }
+                // Remove trailing slash if present
+                if (formattedPath.endsWith('/')) {
+                    formattedPath = formattedPath.slice(0, -1);
+                }
+                exportBox.style.display = 'block';
+                exportBox.querySelector('code').textContent = `export IGN_GAZEBO_RESOURCE_PATH=${formattedPath}:$IGN_GAZEBO_RESOURCE_PATH`;
             }
             
             .button-group {
@@ -275,6 +298,13 @@
         </div>
 
         <div class="main-content">
+            <div id="exportCommandBox" style="display:none; margin-bottom: 25px;">
+                <label style="font-weight:600; color:#2c3e50; margin-bottom:6px; display:block;">Command to add model path to your <code>.bashrc</code> or <code>.zshrc</code>:</label>
+                <div style="background:#2c3e50; color:#ecf0f1; padding:14px 18px; border-radius:8px; font-family:'Courier New',monospace; font-size:1rem; word-break:break-all;">
+                    <code>export IGN_GAZEBO_RESOURCE_PATH=/path-to-model:$IGN_GAZEBO_RESOURCE_PATH</code>
+                </div>
+                <small style="color:#7f8c8d; margin-top:5px; display:block;">Copy and paste this into your shell config to use your models in Gazebo.</small>
+            </div>
             <div class="input-section">
                 <div id="fileStatus" class="file-status loading">
                     📄 Loading world.sdf file...
