@@ -250,33 +250,10 @@
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 2rem;
-
-                // Add event to update the export command box
-                document.getElementById('newPath').addEventListener('input', this.updateExportCommand.bind(this));
             }
             
             .main-content {
                 padding: 20px;
-            }
-
-            updateExportCommand() {
-                const newPath = document.getElementById('newPath').value.trim();
-                const exportBox = document.getElementById('exportCommandBox');
-                if (!newPath) {
-                    exportBox.style.display = 'none';
-                    return;
-                }
-                let formattedPath = newPath;
-                // Remove file:// prefix if present for the export command
-                if (formattedPath.startsWith('file://')) {
-                    formattedPath = formattedPath.replace(/^file:\/\//, '');
-                }
-                // Remove trailing slash if present
-                if (formattedPath.endsWith('/')) {
-                    formattedPath = formattedPath.slice(0, -1);
-                }
-                exportBox.style.display = 'block';
-                exportBox.querySelector('code').textContent = `export IGN_GAZEBO_RESOURCE_PATH=${formattedPath}:$IGN_GAZEBO_RESOURCE_PATH`;
             }
             
             .button-group {
@@ -298,13 +275,6 @@
         </div>
 
         <div class="main-content">
-            <div id="exportCommandBox" style="display:none; margin-bottom: 25px;">
-                <label style="font-weight:600; color:#2c3e50; margin-bottom:6px; display:block;">Command to add model path to your <code>.bashrc</code> or <code>.zshrc</code>:</label>
-                <div style="background:#2c3e50; color:#ecf0f1; padding:14px 18px; border-radius:8px; font-family:'Courier New',monospace; font-size:1rem; word-break:break-all;">
-                    <code>export IGN_GAZEBO_RESOURCE_PATH=/path-to-model:$IGN_GAZEBO_RESOURCE_PATH</code>
-                </div>
-                <small style="color:#7f8c8d; margin-top:5px; display:block;">Copy and paste this into your shell config to use your models in Gazebo.</small>
-            </div>
             <div class="input-section">
                 <div id="fileStatus" class="file-status loading">
                     📄 Loading world.sdf file...
@@ -330,6 +300,17 @@
                 </a>
                 <small style="color: #7f8c8d; margin-top: 5px; display: block;">
                     Download a zip archive of all models referenced in the SDF file.
+                </small>
+            </div>
+
+            <div class="input-group">
+                <label>🐧 Linux .bashrc Command</label>
+                <div style="position: relative;">
+                    <input type="text" id="bashrcCommand" class="path-input" readonly value="" style="font-family: monospace; background: #f4f4f4; cursor: pointer;" onclick="this.select(); document.execCommand('copy');">
+                    <button id="copyBashrcBtn" class="btn btn-primary" style="position: absolute; right: 5px; top: 5px; padding: 6px 12px; font-size: 0.9rem;">Copy</button>
+                </div>
+                <small style="color: #7f8c8d; margin-top: 5px; display: block;">
+                    Copy and run this command in your Linux terminal to add the models path to your <code>.bashrc</code>.
                 </small>
             </div>
 
@@ -385,7 +366,45 @@
 
                 // Update button state when path changes
                 document.getElementById('newPath').addEventListener('input', this.updateProcessButton.bind(this));
+
+                    // Update bashrc command when path changes
+                    document.getElementById('newPath').addEventListener('input', this.updateBashrcCommand.bind(this));
+                    // Also update on page load
+                    this.updateBashrcCommand();
+
+                    // Copy button
+                    document.getElementById('copyBashrcBtn').addEventListener('click', () => {
+                        const input = document.getElementById('bashrcCommand');
+                        input.select();
+                        document.execCommand('copy');
+                        document.getElementById('copyBashrcBtn').textContent = 'Copied!';
+                        setTimeout(() => {
+                            document.getElementById('copyBashrcBtn').textContent = 'Copy';
+                        }, 1200);
+                    });
             }
+
+                updateBashrcCommand() {
+                    const newPath = document.getElementById('newPath').value.trim();
+                    let bashPath = newPath;
+                    if (!bashPath) {
+                        document.getElementById('bashrcCommand').value = '';
+                        document.getElementById('copyBashrcBtn').disabled = true;
+                        return;
+                    }
+                    // Remove file:// prefix if present
+                    if (bashPath.startsWith('file://')) {
+                        bashPath = bashPath.replace(/^file:\/\//, '');
+                    }
+                    // Remove trailing slash
+                    if (bashPath.endsWith('/')) {
+                        bashPath = bashPath.slice(0, -1);
+                    }
+                    // Compose the command
+                    const cmd = `echo 'export IGN_GAZEBO_RESOURCE_PATH="${bashPath}:$IGN_GAZEBO_RESOURCE_PATH"' >> ~/.bashrc`;
+                    document.getElementById('bashrcCommand').value = cmd;
+                    document.getElementById('copyBashrcBtn').disabled = false;
+                }
 
             async loadWorldFile() {
                 const fileStatus = document.getElementById('fileStatus');
