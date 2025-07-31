@@ -275,7 +275,15 @@
         </div>
 
         <div class="main-content">
+
             <div class="input-section">
+                <div class="input-group">
+                    <label>🗂️ Choose SDF File</label>
+                    <select id="sdfFileSelect" class="path-input" style="width: auto; max-width: 350px; display: inline-block;">
+                        <option value="world.sdf">world.sdf</option>
+                        <option value="warehouse_correct_locations.sdf">warehouse_correct_locations.sdf</option>
+                    </select>
+                </div>
                 <div id="fileStatus" class="file-status loading">
                     📄 Loading world.sdf file...
                 </div>
@@ -353,20 +361,29 @@
     </div>
 
     <script>
+
         class SDFProcessor {
             constructor() {
                 this.originalContent = '';
                 this.modifiedContent = '';
                 this.replacementCount = 0;
-                
+                this.selectedFile = 'world.sdf';
+                this.fileCache = {};
                 this.initializeEventListeners();
-                this.loadWorldFile();
+                this.loadSelectedFile();
             }
+
 
             initializeEventListeners() {
                 document.getElementById('processBtn').addEventListener('click', this.processFile.bind(this));
                 document.getElementById('downloadBtn').addEventListener('click', this.downloadFile.bind(this));
-                
+
+                // File select dropdown
+                document.getElementById('sdfFileSelect').addEventListener('change', (e) => {
+                    this.selectedFile = e.target.value;
+                    this.loadSelectedFile();
+                });
+
                 // Allow processing when Enter is pressed in the path input
                 document.getElementById('newPath').addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
@@ -377,21 +394,21 @@
                 // Update button state when path changes
                 document.getElementById('newPath').addEventListener('input', this.updateProcessButton.bind(this));
 
-                    // Update bashrc command when path changes
-                    document.getElementById('newPath').addEventListener('input', this.updateBashrcCommand.bind(this));
-                    // Also update on page load
-                    this.updateBashrcCommand();
+                // Update bashrc command when path changes
+                document.getElementById('newPath').addEventListener('input', this.updateBashrcCommand.bind(this));
+                // Also update on page load
+                this.updateBashrcCommand();
 
-                    // Copy button
-                    document.getElementById('copyBashrcBtn').addEventListener('click', () => {
-                        const input = document.getElementById('bashrcCommand');
-                        input.select();
-                        document.execCommand('copy');
-                        document.getElementById('copyBashrcBtn').textContent = 'Copied!';
-                        setTimeout(() => {
-                            document.getElementById('copyBashrcBtn').textContent = 'Copy';
-                        }, 1200);
-                    });
+                // Copy button
+                document.getElementById('copyBashrcBtn').addEventListener('click', () => {
+                    const input = document.getElementById('bashrcCommand');
+                    input.select();
+                    document.execCommand('copy');
+                    document.getElementById('copyBashrcBtn').textContent = 'Copied!';
+                    setTimeout(() => {
+                        document.getElementById('copyBashrcBtn').textContent = 'Copy';
+                    }, 1200);
+                });
             }
 
                 updateBashrcCommand() {
@@ -416,29 +433,35 @@
                     document.getElementById('copyBashrcBtn').disabled = false;
                 }
 
-            async loadWorldFile() {
+
+            async loadSelectedFile() {
                 const fileStatus = document.getElementById('fileStatus');
-                
-                try {
-                    fileStatus.textContent = '📄 Loading world.sdf file...';
-                    fileStatus.className = 'file-status loading';
-                    
-                    const response = await fetch('./world.sdf');
-                    
-                    if (!response.ok) {
-                        throw new Error(`Failed to load world.sdf: ${response.status} ${response.statusText}`);
-                    }
-                    
-                    this.originalContent = await response.text();
-                    
-                    fileStatus.textContent = '✅ world.sdf loaded successfully!';
+                const fileName = this.selectedFile;
+                fileStatus.textContent = `📄 Loading ${fileName} file...`;
+                fileStatus.className = 'file-status loading';
+
+                // Use cache if already loaded
+                if (this.fileCache[fileName]) {
+                    this.originalContent = this.fileCache[fileName];
+                    fileStatus.textContent = `✅ ${fileName} loaded successfully!`;
                     fileStatus.className = 'file-status success';
-                    
                     this.updateProcessButton();
-                    
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`./${fileName}`);
+                    if (!response.ok) {
+                        throw new Error(`Failed to load ${fileName}: ${response.status} ${response.statusText}`);
+                    }
+                    this.originalContent = await response.text();
+                    this.fileCache[fileName] = this.originalContent;
+                    fileStatus.textContent = `✅ ${fileName} loaded successfully!`;
+                    fileStatus.className = 'file-status success';
+                    this.updateProcessButton();
                 } catch (error) {
-                    console.error('Error loading world.sdf:', error);
-                    fileStatus.textContent = `❌ Error loading world.sdf: ${error.message}`;
+                    console.error(`Error loading ${fileName}:`, error);
+                    fileStatus.textContent = `❌ Error loading ${fileName}: ${error.message}`;
                     fileStatus.className = 'file-status error';
                 }
             }
@@ -573,17 +596,16 @@
                     alert('No modified content to download.');
                     return;
                 }
-
+                // Use the selected file name for download, with _modified
+                let base = this.selectedFile.replace(/\.sdf$/, '');
                 const blob = new Blob([this.modifiedContent], { type: 'application/xml' });
                 const url = URL.createObjectURL(blob);
-                
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'world_modified.sdf';
+                a.download = `${base}_modified.sdf`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                
                 URL.revokeObjectURL(url);
             }
         }
